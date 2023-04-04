@@ -8,10 +8,6 @@ A P3 Unity project is an application written in [Unity](https://unity.com/) usin
 
 P3Deps was developped against P3_SDK_V0.8 primarily to trim down P3SampleApp. P3Deps is likely to be useful with any P3 project since almost all P3 projects can be traced back to P3SampleApp originally.
 
-## Status
-
-The script is released and continues to be maintained. Please submit a [GitHub issue](https://github.com/clempo2/P3Deps/issues) if you find a problem.
-
 ## Installation
 
 P3Deps assumes the development platform is Windows.
@@ -54,7 +50,7 @@ P3Deps will emit a report with the following information:
 The next step is best performed on a copy of your project or after all changes have been committed to git.
 
 If you choose to trim your project:
-- Extract the rm and rmdir commands from the output and write them in new a batch file like rmdeps.bat
+- Extract the rm and rmdir commands from the output and write them in a new batch file like rmdeps.bat
 - Verify carefully that all these files and directories are indeed not needed.
 - Add C:\Program Files\Git\usr\bin to your PATH if not already there.
 - Execute: rmdeps.bat
@@ -71,6 +67,12 @@ P3Deps starts with a list of assets it knows are used in the project:
 - A few resources loaded by the SDK
 
 P3Deps traverses the assets starting from these roots and follows references to other assets. For scripts, P3Deps finds referenced classes, calls to Resources.Load(), calls to PlaySound() and PlaySound3D().
+
+## Support
+
+Please submit a [GitHub issue](https://github.com/clempo2/P3Deps/issues) if you find a problem.
+
+You can discuss P3Deps and other P3 Development topics on the [P3 Community Discord Server](https://discord.gg/GuKGcaDkjd) in the dev-forum channel under the 3rd Party Development section.
 
 ## License
 
