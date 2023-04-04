@@ -68,6 +68,8 @@ P3Deps starts with a list of assets it knows are used in the project:
 
 P3Deps traverses the assets starting from these roots and follows references to other assets. For scripts, P3Deps finds referenced classes, calls to Resources.Load(), calls to PlaySound() and PlaySound3D().
 
+P3Deps does not suggest to remove any asset under ./Assets/Standard Assets. If you intend to remove the Standard Assets from your project, inspect the report of used assets carefully. For example, P3SampleApp makes use of a handful of these assets.
+
 ## Support
 
 Please submit a [GitHub issue](https://github.com/clempo2/P3Deps/issues) if you find a problem.
