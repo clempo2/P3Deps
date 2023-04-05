@@ -72,8 +72,8 @@ mark_roots("$assets/Resources/Prefabs/Framework");
 mark_roots("$assets/Editor");
 mark_roots("$assets/Gizmos");
 mark_roots("$assets/Plugins/ConsoleE");
-mark_roots("$assets/Plugins/sqlite3.def");
 find(\&mark_dlls, "$assets/Plugins");
+$roots{"$assets/Plugins/sqlite3.def"} = 1;
 delete $roots{"$assets/Plugins/mysql.data.dll"};
 
 my $appcode = find_appcode();
@@ -90,7 +90,7 @@ $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/TwitchChatBot"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/PopupMessage"} = 1;
 
 # find all the assets used by the project by traversing from the roots
-foreach my $root (keys %roots) {
+foreach my $root (sort keys %roots) {
   traverse($root, "");
 }
 
@@ -163,7 +163,7 @@ sub traverse {
       foreach my $identifier (keys %identifierset) {
         if ($classes{$identifier}) {
           traverse($classes{$identifier}, $indent . "  ");
-	}
+        }
       }
     }
   }
@@ -172,11 +172,11 @@ sub traverse {
 sub resource_fullpath {
   my $resource = $_[0];
   foreach my $path (keys %guids) {
-    return $path if rindex($path, $resource, 0) == 0;
+    return $path if $path =~ m/^\Q$resource\E\.\w+$/;
   }
 
   # print "Unknown resource $resource\n";
-  return "";
+  return ""; # false
 }
 
 sub show_all_refs {
@@ -257,30 +257,28 @@ sub process_script {
   }
 
   # find all resources loaded explicitly by this script
-  foreach my $load ($code =~ m/Resources.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
-    if ($load =~ m/\"(.*)\"\s*/) {
-      my $loadarg = $1;
-      # check for the only expression we recognize
-      if ($loadarg =~ m/\" \+ sceneName \+ \"/) {
-        foreach my $scene (keys %scenes) {
-	  my $resource = "$assets/Resources/$loadarg";
-	  $resource =~ s/\" \+ sceneName \+ \"/$scene/;
-	  if (-f "$resource.prefab") {
-	    $resources{$path}{$resource} = 1;
-	  }
-	}
+  foreach my $loadarg ($code =~ m/Resources.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
+    # check for the only expression we recognize
+    # Resources.Load("Prefabs/" + sceneName + "/BallSave")
+    if ($loadarg =~ m#^\"Prefabs/\" \+ sceneName \+ \"/([^\"]+)\"$#) {
+      my $prefab = $1;
+      foreach my $scene (keys %scenes) {
+        my $resource = "$assets/Resources/Prefabs/$scene/$prefab";
+        if (-f "$resource.prefab") {
+          $resources{$path}{$resource} = 1;
+        }
       }
-      else {
-        my $resource = "$assets/Resources/$loadarg";
-        $resources{$path}{$resource} = 1;
-      }
+    }
+    elsif ($loadarg =~ m/^\s*\"([^\"]+)\"\s*$/) {
+      my $resource = "$assets/Resources/$1";
+      $resources{$path}{$resource} = 1;
     }
     #else {
     #  print "Unrecognized resource in Resources.Load=$loadarg\n";
     #}
   }
 
-  # find all audio clips played by this script
+  # find audio clips played by this script
   # P3SAAudio.Instance.PlaySound("FX/Blackout");
   # P3SAAudio.Instance.PlaySound3D("PlayerAdded", gameObject.transform);
   foreach my $play ($code =~ m/PlaySound3?D?\s*\(([^)]*)/g) {
@@ -299,18 +297,20 @@ sub process_script {
 sub process_asset {
   my $path = $_[0];
   my $asset = read_file($path);
+  
   foreach my $ref ($asset =~ m/, guid: ([^,]*),/g) {
     $refs{$path}{$ref} = 1;
   }
 
-  foreach my $clip ($asset =~ m/^\s*(?:clipName|\w*Clip):\s*(.*)/mg) {
+  foreach my $clip ($asset =~ m/^\s*(?:clipName|\w+Clip): (.*)$/mg) {
     if ($clip =~ m/\w/) {
+      $clip =~ tr/\\/\//;
       my $resource = "$assets/Resources/Sound/$clip";
       $resources{$path}{$resource} = 1;
     }
   }
 }
-
+  
 # find the enabled scenes in the build settings
 # don't use a YAML package, we want to run on bare Git Perl distribution
 
