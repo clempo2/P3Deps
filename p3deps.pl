@@ -71,10 +71,9 @@ find(\&process_file, $assets);
 mark_roots("$assets/Resources/Prefabs/Framework");
 mark_roots("$assets/Editor");
 mark_roots("$assets/Gizmos");
-mark_roots("$assets/Plugins/ConsoleE");
-find(\&mark_dlls, "$assets/Plugins");
-$roots{"$assets/Plugins/sqlite3.def"} = 1;
-delete $roots{"$assets/Plugins/mysql.data.dll"};
+mark_roots("$assets/Plugins");
+delete_roots("/libpinproc.*");
+delete_roots("/mysql.data.dll");
 
 my $appcode = find_appcode();
 my $appsetup = "$assets/Scripts/GUI/${appcode}Setup.cs";
@@ -347,11 +346,11 @@ sub mark_roots {
   }
 }
 
-# mark DLLs as used
-sub mark_dlls {
-  if (-f $_ && $_ =~ /\.dll$/) {
-    my $dll = $File::Find::name;
-    $used{$dll} = 1;
+# delete roots that match a pattern
+sub delete_roots {
+  my $pattern = $_[0];
+  foreach my $path (keys %guids) {
+    delete $roots{$path} if $path =~ m/$pattern/;
   }
 }
 
