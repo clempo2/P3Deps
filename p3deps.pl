@@ -141,7 +141,7 @@ sub traverse {
     print "$indent$path\n";
 
     my %refguids = %{$refs{$path}};
-    foreach my $refguid (keys %refguids) {
+    foreach my $refguid (sort keys %refguids) {
       if (defined $paths{$refguid}) {
         traverse($paths{$refguid}, $indent . "  ");
       } 
@@ -151,7 +151,7 @@ sub traverse {
     }
 
     my %resourceset = %{$resources{$path}};
-    foreach my $resource (keys %resourceset) {
+    foreach my $resource (sort keys %resourceset) {
       my $respath = resource_fullpath($resource);
       if ($respath) {
         traverse($respath, $indent . "  ");
@@ -163,9 +163,10 @@ sub traverse {
 
     if (defined $identifiers{$path}) {
       my %identifierset = %{$identifiers{$path}};
-      foreach my $identifier (keys %identifierset) {
-        if ($classes{$identifier}) {
-          traverse($classes{$identifier}, $indent . "  ");
+      foreach my $identifier (sort keys %identifierset) {
+        my $impl = $classes{$identifier};
+        if ($impl and $impl ne $path) {
+          traverse($impl, $indent . "  ");
         }
       }
     }
