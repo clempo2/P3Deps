@@ -107,7 +107,7 @@ print "\n\n\n\n =========== Unused Assets  ===========\n";
 my $standard_assets = "$assets/Standard Assets";
 foreach my $path (sort keys %guids) {
   if (!$used{$path} and rindex($path, $standard_assets, 0) == -1) {
-    print "rm \"$path.meta\"\n";
+    print "rm \"$path.meta\"\n" if (-f "$path.meta");
     print "rm \"$path\"\n";
   }
 }
@@ -119,8 +119,12 @@ foreach my $dir (reverse sort keys %dirs) {
   }
 }
 
+if (-f "$project/ReleaseNotes") {
+  print "\n\nThe ./ReleaseNotes can be removed if unmodified from the SDK.\n";
+}
+
 if (-d "$project/Documentation") {
-  print "\n\nThe Documentation directory can also be removed from your project\n";
+  print "\n\nThe ./Documentation directory can also be removed from your project\n";
 }
 
 exit;
@@ -208,7 +212,10 @@ sub show_all_resources {
 }
 
 sub process_file {
-  if (-f $_ && $_ =~ /\.meta$/) {
+  if (-f $_ && $_ =~ /^\.DS_Store$/) {
+    $guids{$File::Find::name} = "null";
+  }
+  elsif (-f $_ && $_ =~ /\.meta$/) {
     my $meta = $File::Find::name;
     
     my $path = $meta;
