@@ -138,8 +138,8 @@ exit;
 
 # given a used asset, traverse its dependencies to mark them used
 sub traverse {
-  my $path = $_[0];
-  my $indent = $_[1];
+  my ($path, $indent) = @_;
+
   if ($used{$path}) {
     print "$indent$path [again]\n";
   }
@@ -181,7 +181,8 @@ sub traverse {
 }
 
 sub resource_fullpath {
-  my $resource = $_[0];
+  my ($resource) = @_;
+
   foreach my $path (keys %guids) {
     return $path if $path =~ m/^\Q$resource\E\.\w+$/;
   }
@@ -255,7 +256,7 @@ sub process_file {
 }
 
 sub read_guid {
-  my $meta = $_[0];
+  my ($meta) = @_;
   my $contents = read_file($meta);
   $contents =~ m/\bguid: (.*)/;
   my $guid = $1;
@@ -263,7 +264,8 @@ sub read_guid {
 }
 
 sub process_script {
-  my $path = $_[0];
+  my ($path) = @_;
+
   # find all class implementations in this script
   my $code = read_script($path);
   foreach my $class ($code =~ m/\bclass\s+(\w+)/g) {
@@ -293,13 +295,22 @@ sub process_script {
   }
 
   # find audio clips played by this script
+  # BEWARE of a Perl bug if you try to use the | operator in those regexp's
+
   # P3SAAudio.Instance.PlaySound("FX/Blackout");
   # P3SAAudio.Instance.PlaySound3D("PlayerAdded", gameObject.transform);
   foreach my $play ($code =~ m/PlaySound3?D?\s*\(([^)]*)/g) {
-    if ($play =~ m/^\s*\"([^"]+)\"/) {
-      my $sound = "$assets/Resources/Sound/$1";
-      $resources{$path}{$sound} = 1;
-    }
+    process_sound($path, $play);
+  }
+
+  # PlayEdgeSound("SideTargetUnlit", (bool)eventObject);
+  foreach my $play ($code =~ m/PlayEdgeSound\s*\(([^)]*)/g) {
+    process_sound($path, $play);
+  }
+
+  # PostModeEventToGUI("Evt_PlaySound", "FX/HitSound");
+  foreach my $play ($code =~ m/PostModeEventToGUI\s*\(\s*\"Evt_PlaySound\",\s*([^)]*)/g) {
+    process_sound($path, $play);
   }
 
   # find all identifiers in the code, some of them might be class names
@@ -308,8 +319,17 @@ sub process_script {
   }
 }
 
+sub process_sound {
+  my ($path, $play) = @_;
+
+  if ($play =~ m/^\s*\"([^"]+)\"/) {
+    my $sound = "$assets/Resources/Sound/$1";
+    $resources{$path}{$sound} = 1 if $sound;
+  }
+}
+
 sub process_asset {
-  my $path = $_[0];
+  my ($path) = @_;
   my $asset = read_file($path);
   
   foreach my $ref ($asset =~ m/, guid: ([^,]*),/g) {
@@ -354,7 +374,7 @@ sub find_scenes {
 
 # mark every file under the specified directory (and subdirs) as roots
 sub mark_roots {
-  my $dir = $_[0];
+  my ($dir) = @_;
   my $dirpath = $dir . "/";
   foreach my $path (keys %guids) {
     $roots{$path} = 1 if rindex($path, $dirpath, 0) == 0;
@@ -363,7 +383,7 @@ sub mark_roots {
 
 # delete roots that match a pattern
 sub delete_roots {
-  my $pattern = $_[0];
+  my ($pattern) = @_;
   foreach my $path (keys %guids) {
     delete $roots{$path} if $path =~ m/$pattern/;
   }
@@ -378,7 +398,7 @@ sub find_appcode {
 }
 
 sub is_binary {
-  my $filename = $_[0];
+  my ($filename) = @_;
   return ($filename =~ /\.(ogg|wav|sfk|mp3|png|zip|ttf|tif|so|dylib|dll|tga|jpg|psd)$/);
 }
 
@@ -423,7 +443,7 @@ sub is_binary {
 # .sfk
 
 sub is_used_dir {
-  my $dir = $_[0];
+  my ($dir) = @_;
   my $dirpath = $dir . "/";
 
   foreach my $path (keys %used) {
@@ -434,7 +454,7 @@ sub is_used_dir {
 }
 
 sub read_file {
-  my $path = $_[0];
+  my ($path) = @_;
   my $content = "";
   
   open(my $fh, "<", $path) or die "Could not open file '$path' $!";
@@ -448,14 +468,14 @@ sub read_file {
 }
 
 sub read_script {
-  my $path = $_[0];
+  my ($path) = @_;
   my $code = read_file($path);
   $code = remove_comments($code);
   return $code;
 }
 
 sub remove_comments {
-  my $code = $_[0];
+  my ($code) = @_;
   # taken from https://metacpan.org/pod/perlfaq6#How-do-I-use-a-regular-expression-to-strip-C-style-comments-from-a-file
   $code =~ s#/\*[^*]*\*+([^/*][^*]*\*+)*/|//([^\\]|[^\n][\n]?)*?\n|("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|.[^/"'\\]*)#defined $3 ? $3 : ""#gse;
   return $code;
