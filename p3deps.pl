@@ -22,6 +22,12 @@ if (!(-d "$assets" and -f "$appconfig" and -f $buildsettings)) {
   exit;
 }
 
+my $contents = read_file($buildsettings);
+if (!($contents =~ /^%YAML/)) {
+  print "Error: asset serialization must be in YAML\n";
+  exit;
+}
+
 # set of scene names in the project build settings
 my %scenes = ();
 
