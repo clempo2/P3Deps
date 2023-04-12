@@ -85,8 +85,9 @@ $resources{$appsetup}{"$assets/Resources/Fonts/sf distant galaxy alternate itali
 $resources{$appsetup}{"$assets/Resources/Prefabs/${appcode}Setup"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/${appcode}NamedLocations"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/${appcode}PopupScore"} = 1;
-$resources{$appsetup}{"$assets/Resources/Prefabs/GUI/TwitchChatBot"} = 1;
+$resources{$appsetup}{"$assets/Resources/Prefabs/GUI/LEDSimulator"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/PopupMessage"} = 1;
+$resources{$appsetup}{"$assets/Resources/Prefabs/GUI/TwitchChatBot"} = 1;
 
 # find all the assets used by the project by traversing from the roots
 foreach my $root (sort keys %roots) {
