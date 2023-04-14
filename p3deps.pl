@@ -243,12 +243,12 @@ sub process_script {
 
   # P3SAAudio.Instance.PlaySound("FX/Blackout");
   # P3SAAudio.Instance.PlaySound3D("PlayerAdded", gameObject.transform);
-  foreach my $play ($code =~ m/PlaySound3?D?\s*\(([^)]*)/g) {
+  foreach my $play ($code =~ m/PlaySound3?D?\s*\(([^,)]*)/g) {
     process_sound($path, $play);
   }
 
   # PlayEdgeSound("SideTargetUnlit", (bool)eventObject);
-  foreach my $play ($code =~ m/PlayEdgeSound\s*\(([^)]*)/g) {
+  foreach my $play ($code =~ m/PlayEdgeSound\s*\(([^,)]*)/g) {
     process_sound($path, $play);
   }
 
@@ -265,7 +265,6 @@ sub process_script {
 
 sub process_sound {
   my ($path, $play) = @_;
-
   if ($play =~ m/^\s*\"([^"]+)\"/) {
     my $sound = "$assets/Resources/Sound/$1";
     $resources{$path}{$sound} = 1 if $sound;
