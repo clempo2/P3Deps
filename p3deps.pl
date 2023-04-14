@@ -115,7 +115,7 @@ my $standard_assets = "$assets/Standard Assets";
 foreach my $path (sort keys %guids) {
   if (!$used{$path} and rindex($path, $standard_assets, 0) == -1) {
     print "rm \"$path.meta\"\n" if (-f "$path.meta");
-    print "rm \"$path\"\n";
+    print "rm \"$path\"\n" if (-f $path);
   }
 }
 
@@ -136,124 +136,50 @@ if (-d "$project/Documentation") {
 
 exit;
 
-# given a used asset, traverse its dependencies to mark them used
-sub traverse {
-  my ($path, $indent) = @_;
-
-  if ($used{$path}) {
-    print "$indent$path [again]\n";
-  }
-  else {
-    $used{$path} = 1;
-    print "$indent$path\n";
-
-    my %refguids = %{$refs{$path}};
-    foreach my $refguid (sort keys %refguids) {
-      if (defined $paths{$refguid}) {
-        traverse($paths{$refguid}, $indent . "  ");
-      } 
-      #else {
-      #  print "$indent  Unknown $refguid\n";
-      #}
-    }
-
-    my %resourceset = %{$resources{$path}};
-    foreach my $resource (sort keys %resourceset) {
-      my $respath = resource_fullpath($resource);
-      if ($respath) {
-        traverse($respath, $indent . "  ");
-      }
-      else {
-        $missing{$resource} = 1;
-      }
-    }
-
-    if (defined $identifiers{$path}) {
-      my %identifierset = %{$identifiers{$path}};
-      foreach my $identifier (sort keys %identifierset) {
-        my $impl = $classes{$identifier};
-        if ($impl and $impl ne $path) {
-          traverse($impl, $indent . "  ");
-        }
-      }
-    }
-  }
-}
-
-sub resource_fullpath {
-  my ($resource) = @_;
-
-  foreach my $path (keys %guids) {
-    return $path if $path =~ m/^\Q$resource\E\.\w+$/;
-  }
-
-  # print "Unknown resource $resource\n";
-  return ""; # false
-}
-
-sub show_all_refs {
-  print "Refs ======================\n";
-  foreach my $path (keys %guids) {
-    print "$path\n";
-    
-    my %guidset = %{$refs{$path}};
-    foreach my $guid (keys %guidset) {
-      if (defined $paths{$guid}) {
-        print "  $paths{$guid}\n";
-      } 
-      else {
-        print "  Unknown $guid\n";
-      }
-    }
-  }
-}
-
-sub show_all_resources {
-  print "Resources ======================\n";
-  foreach my $path (keys %guids) {
-    print "$path\n";
-    
-    my %resourceset = %{$resources{$path}};
-    foreach my $resource (keys %resourceset) {
-      print "  $resource\n";
-    }
-  }
-}
+# this collects information about every file
+# without regards if it is used by the project or not
 
 sub process_file {
-  if (-f $_ && $_ =~ /^\.DS_Store$/) {
-    $guids{$File::Find::name} = "null";
+  if (-d $_) {
+    $dirs{$File::Find::name} = 1;
   }
-  elsif (-f $_ && $_ =~ /\.meta$/) {
+  elsif (-f $_ and $_ =~ /\.meta$/) {
     my $meta = $File::Find::name;
-    
+
     my $path = $meta;
     $path =~ s/\.meta$//;
 
-    my $respath = $path;
-    $respath =~ s/\.[^.]+$//;
-    $fullpaths{$respath} = $path;
-    $refs{$path} = {};
-    $deps{$path} = {};
-    $resources{$path} = {};
+    init_path($path);
 
     if (-d $path) {
       $dirs{$path} = 1;
     }
-    elsif (-f $path) {
+    else {
       my $guid = read_guid($meta);
       $guids{$path} = $guid;
       $paths{$guid} = $path;
+    }
+  }
+  elsif (-f $_ and $_ !~ /\.meta$/) {
+    my $path = $File::Find::name;
+    
+    if (! -f "$_.meta") {
+      # files without a .meta file
+      $guids{$path} = "null";
+    }
 
-      if ($path =~ /\.cs$/) {
-        process_script($path);
-      }
-      elsif (!is_binary($path)) {
-        process_asset($path);
-      }
+    init_path($path);
+
+    if ($path =~ /\.cs$/) {
+      process_script($path);
+    }
+    elsif (!is_binary($path)) {
+      process_asset($path);
     }
   }
 }
+
+# read a .meta file and extract the asset guid
 
 sub read_guid {
   my ($meta) = @_;
@@ -261,6 +187,24 @@ sub read_guid {
   $contents =~ m/\bguid: (.*)/;
   my $guid = $1;
   $guid || die "Missing guid in meta file $meta";
+}
+
+# initialize the state for a new path
+# do it only once because it will be called for the path and its .meta file
+# in case one or the other is missing
+
+sub init_path {
+  my ($path) = @_;
+
+  if (! $resources{$path}) {
+    $resources{$path} = {};
+    $refs{$path} = {};
+    $deps{$path} = {};
+
+    my $respath = $path;
+    $respath =~ s/\.[^.]+$//;
+    $fullpaths{$respath} = $path;
+  }
 }
 
 sub process_script {
@@ -395,6 +339,90 @@ sub find_appcode {
   $appcode = $1;
   $appcode || die "Cannot find app code in $appconfig\n";
   return $appcode;
+}
+
+# given a used asset, traverse its dependencies to mark them used
+sub traverse {
+  my ($path, $indent) = @_;
+
+  if ($used{$path}) {
+    print "$indent$path [again]\n";
+  }
+  else {
+    $used{$path} = 1;
+    print "$indent$path\n";
+
+    my %refguids = %{$refs{$path}};
+    foreach my $refguid (sort keys %refguids) {
+      if (defined $paths{$refguid}) {
+        traverse($paths{$refguid}, $indent . "  ");
+      } 
+      #else {
+      #  print "$indent  Unknown $refguid\n";
+      #}
+    }
+
+    my %resourceset = %{$resources{$path}};
+    foreach my $resource (sort keys %resourceset) {
+      my $respath = resource_fullpath($resource);
+      if ($respath) {
+        traverse($respath, $indent . "  ");
+      }
+      else {
+        $missing{$resource} = 1;
+      }
+    }
+
+    if (defined $identifiers{$path}) {
+      my %identifierset = %{$identifiers{$path}};
+      foreach my $identifier (sort keys %identifierset) {
+        my $impl = $classes{$identifier};
+        if ($impl and $impl ne $path) {
+          traverse($impl, $indent . "  ");
+        }
+      }
+    }
+  }
+}
+
+sub resource_fullpath {
+  my ($resource) = @_;
+
+  foreach my $path (keys %guids) {
+    return $path if $path =~ m/^\Q$resource\E\.\w+$/;
+  }
+
+  # print "Unknown resource $resource\n";
+  return ""; # false
+}
+
+sub show_all_refs {
+  print "Refs ======================\n";
+  foreach my $path (keys %guids) {
+    print "$path\n";
+    
+    my %guidset = %{$refs{$path}};
+    foreach my $guid (keys %guidset) {
+      if (defined $paths{$guid}) {
+        print "  $paths{$guid}\n";
+      } 
+      else {
+        print "  Unknown $guid\n";
+      }
+    }
+  }
+}
+
+sub show_all_resources {
+  print "Resources ======================\n";
+  foreach my $path (keys %guids) {
+    print "$path\n";
+    
+    my %resourceset = %{$resources{$path}};
+    foreach my $resource (keys %resourceset) {
+      print "  $resource\n";
+    }
+  }
 }
 
 sub is_binary {
