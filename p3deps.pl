@@ -210,12 +210,6 @@ sub init_path {
 sub process_script {
   my ($path) = @_;
 
-  # find all class implementations in this script
-  my $code = read_script($path);
-  foreach my $class ($code =~ m/\b(?:class|struct|enum)\s+(\w+)/g) {
-    $classes{$class} = $path;
-  }
-
   # find all resources loaded explicitly by this script
   foreach my $loadarg ($code =~ m/Resources.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
     # check for the only expression we recognize
@@ -257,9 +251,16 @@ sub process_script {
     process_sound($path, $play);
   }
 
-  # find all identifiers in the code, some of them might be class names
-  # remove string literals because we assume they never contain class names
+  # remove string literals because we don't want to confuse them as identifiers
   $code =~ s/"(?:[^"\\]|\\.)*"//g;
+
+  # find all class implementations in this script
+  my $code = read_script($path);
+  foreach my $class ($code =~ m/\b(?:class|struct|enum)\s+(\w+)/g) {
+    $classes{$class} = $path;
+  }
+
+  # find all identifiers in the code, some might be a class, struct or enum ref
   foreach my $identifier ($code =~ m/\w+/g) {
     $identifiers{$path}{$identifier} = 1;
   }

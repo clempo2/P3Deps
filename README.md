@@ -66,7 +66,7 @@ P3Deps starts with a list of assets it knows are used in the project:
 - Assets/Scripts/GUI/${AppCode}Setup.cs
 - A few resources loaded by the SDK
 
-P3Deps traverses the assets starting from these roots and follows references to other assets. For scripts, P3Deps inspects identifiers for referenced classes and looks for dynamic resources in calls to Resources.Load(), PlaySound(), PlaySound3D(), PlayEdgeSound() and PostModeEventToGUI("Evt_PlaySound",...).
+P3Deps traverses the assets starting from these roots and follows references to other assets. P3Deps inspects identifiers in scripts for referenced classes, structs or enums. P3Deps also looks for dynamic resources in calls to Resources.Load(), PlaySound(), PlaySound3D(), PlayEdgeSound() and PostModeEventToGUI("Evt_PlaySound",...).
 
 P3Deps does not suggest to remove any asset under ./Assets/Standard Assets. If you intend to remove the Standard Assets from your project, inspect the report of used assets carefully. For example, P3SampleApp makes use of a handful of these assets.
 
