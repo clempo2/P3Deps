@@ -46,7 +46,7 @@ my %guids = ();
 # maps guid to asset path
 my %paths = ();
 
-# maps a class name to its file path
+# maps a class name to its file path, struct and enum are considered classes
 my %classes = ();
 
 # maps script asset path to set of identifiers in the source
@@ -212,7 +212,7 @@ sub process_script {
 
   # find all class implementations in this script
   my $code = read_script($path);
-  foreach my $class ($code =~ m/\bclass\s+(\w+)/g) {
+  foreach my $class ($code =~ m/\b(?:class|struct|enum)\s+(\w+)/g) {
     $classes{$class} = $path;
   }
 
