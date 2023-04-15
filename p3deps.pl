@@ -258,6 +258,8 @@ sub process_script {
   }
 
   # find all identifiers in the code, some of them might be class names
+  # remove string literals because we assume they never contain class names
+  $code =~ s/"(?:[^"\\]|\\.)*"//g;
   foreach my $identifier ($code =~ m/\w+/g) {
     $identifiers{$path}{$identifier} = 1;
   }
