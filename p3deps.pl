@@ -209,6 +209,7 @@ sub init_path {
 
 sub process_script {
   my ($path) = @_;
+  my $code = read_script($path);
 
   # find all resources loaded explicitly by this script
   foreach my $loadarg ($code =~ m/Resources.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
@@ -255,7 +256,6 @@ sub process_script {
   $code =~ s/"(?:[^"\\]|\\.)*"//g;
 
   # find all class implementations in this script
-  my $code = read_script($path);
   foreach my $class ($code =~ m/\b(?:class|struct|enum)\s+(\w+)/g) {
     $classes{$class} = $path;
   }
