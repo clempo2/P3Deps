@@ -85,6 +85,9 @@ my $appcode = find_appcode();
 my $appsetup = "$assets/Scripts/GUI/${appcode}Setup.cs";
 $roots{$appsetup} = 1;
 
+my $baseGameMode = read_script("$assets/Scripts/Modes/${appcode}BaseGameMode.cs");
+my $twitchEnabled = $baseGameMode =~ m/enableTwitchIntegration\s*=\s*true/;
+
 # add some resources loaded by the SDK, fake they are loaded by ${appcode}Setup.cs
 $resources{$appsetup}{"$assets/Resources/Fonts/tunga"} = 1;
 $resources{$appsetup}{"$assets/Resources/Fonts/sf distant galaxy alternate italic"} = 1;
@@ -93,7 +96,9 @@ $resources{$appsetup}{"$assets/Resources/Prefabs/${appcode}NamedLocations"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/${appcode}PopupScore"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/LEDSimulator"} = 1;
 $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/PopupMessage"} = 1;
-$resources{$appsetup}{"$assets/Resources/Prefabs/GUI/TwitchChatBot"} = 1;
+if ($twitchEnabled) {
+  $resources{$appsetup}{"$assets/Resources/Prefabs/GUI/TwitchChatBot"} = 1;
+}
 
 # find all the assets used by the project by traversing from the roots
 foreach my $root (sort keys %roots) {
