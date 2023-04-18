@@ -287,8 +287,10 @@ sub process_asset {
     $refs{$path}{$ref} = 1;
   }
 
-  foreach my $clip ($asset =~ m/^\s*(?:clipName|\w+Clip): (.*)$/mg) {
-    if ($clip =~ m/\w/) {
+  while ($asset =~ m/^\s*(clipName|\w+Clip): (.*)$/mg) {
+    my $property = $1;
+    my $clip = $2;
+    if ($property ne "m_NearClip" and $property ne "m_FarClip" and $clip =~ m/\w/) {
       $clip =~ tr/\\/\//;
       my $resource = "$assets/Resources/Sound/$clip";
       $resources{$path}{$resource} = 1;
