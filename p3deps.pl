@@ -238,6 +238,13 @@ sub process_script {
     #}
   }
 
+  # find prefabs in string literals
+  # selectorManagerMode.RegisterSelector(new SettingsSelectorMode(p3, Priorities.PRIORITY_SERVICE_MODE), "SettingsEditor", "Prefabs/Framework/SettingsEditor");
+  foreach my $prefab ($code =~ m/\"(Prefabs\/[^\"]*[^\"\/])\"/g) {
+    my $resource = "$assets/Resources/$prefab";
+    $resources{$path}{$resource} = 1;
+  }
+
   # find audio clips played by this script
   # BEWARE of a Perl bug if you try to use the | operator in those regexp's
 
