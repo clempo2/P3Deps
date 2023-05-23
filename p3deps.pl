@@ -189,7 +189,7 @@ sub process_file {
 sub read_guid {
   my ($meta) = @_;
   my $contents = read_file($meta);
-  $contents =~ m/\bguid: (.*)/;
+  $contents =~ m/\bguid: (\w*)/;
   my $guid = $1;
   $guid || die "Missing guid in meta file $meta";
 }
@@ -294,7 +294,7 @@ sub process_asset {
     $refs{$path}{$ref} = 1;
   }
 
-  while ($asset =~ m/^\s*(clipName|\w+Clip): (.*)$/mg) {
+  while ($asset =~ m/^\s*(clipName|\w+Clip): ([^\r\n]*)/mg) {
     my $property = $1;
     my $clip = $2;
     if ($property ne "m_NearClip" and $property ne "m_FarClip" and $clip =~ m/\w/) {
@@ -317,7 +317,7 @@ sub find_scenes {
     if ($line =~ /- enabled: (\d)/) {
       $enabled = $1;
     }
-    elsif ($line =~ m/path: (.*)/) {
+    elsif ($line =~ m/path: ([^\r\n]*)/) {
       if ($enabled) {
         my $path = $1;
         my $root = "$project/$path";
@@ -372,7 +372,7 @@ sub traverse {
     foreach my $refguid (sort keys %refguids) {
       if (defined $paths{$refguid}) {
         traverse($paths{$refguid}, $indent . "  ");
-      } 
+      }
       #else {
       #  print "$indent  Unknown $refguid\n";
       #}
