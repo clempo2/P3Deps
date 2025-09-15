@@ -58,6 +58,9 @@ my %refs = ();
 # maps asset path to set of resources used
 my %resources = ();
 
+# set of AudioClipGroups found in the scenes
+my %audio_clip_groups = ();
+
 # maps asset path to set of dependency paths
 my %deps = ();
 
@@ -232,7 +235,7 @@ sub process_script {
       my $resource = "$assets/Resources/$1";
       $resources{$path}{$resource} = 1;
     }
-    # check for this exact expression
+    # check for prefabs under a scene directory
     # Resources.Load("Prefabs/" + sceneName + "/BallSave")
     elsif ($loadarg =~ m#^\"Prefabs/\" \+ sceneName \+ \"/([^\"]+)\"$#) {
       my $prefab = $1;
@@ -336,6 +339,44 @@ sub process_asset {
       $resources{$path}{$resource} = 1;
     }
   }
+
+  my %audio_comps = ();
+  
+  my @objects = ($asset =~ /^---.*?(?=^---|\z)/msg);
+  foreach my $obj (@objects) {
+    # find AudioClipGroup components in the whole file
+    if ($obj =~ /^  m_Script: \{fileID: 11500000, guid: c2b8ee64c80e93141abe97d5cf75b2e0, type: 3\}/m) {
+      if ($obj =~ /^---.*?&(\d+)/m) {
+        my $fileid = $1;
+        $audio_comps{$fileid} = 1;
+      }
+    }
+  }
+
+  if (%audio_comps) { # if any audio clip group component found
+    foreach my $obj (@objects) {
+      # find the fileids of all the component in this GameObject
+      my @fileids = ($obj =~ /^  - component: \{fileID: (\d+)\}/mg);
+  
+      # Check if any component in the game object is an AudioClipGroup
+      my $is_audio = 0;
+      foreach my $fid (@fileids) {
+        if ($audio_comps{$fid}) {
+          $is_audio = 1;
+          last;
+        }
+      }
+  
+      # If game object is an AudioClipGroup, extract the name
+      if ($is_audio && $obj =~ /^  m_Name:\s*(.+)/m) {
+        my $name = $1;
+        $name =~ s/\r//;  # remove cr
+        my $resource = "$assets/Resources/Sound/$name";
+        $resources{$path}{$resource} = 1;
+        $audio_clip_groups{$resource} = 1;
+      }
+    }
+  }
 }
   
 # find the enabled scenes in the build settings
@@ -416,6 +457,9 @@ sub traverse {
       my $respath = resource_fullpath($resource);
       if ($respath) {
         traverse($respath, $indent . "  ");
+      }
+      elsif ($audio_clip_groups{$resource}) {
+        $used{$resource} = 1;
       }
       else {
         $missing{$resource} = 1;
