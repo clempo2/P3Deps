@@ -216,11 +216,25 @@ sub process_script {
   my ($path) = @_;
   my $code = read_script($path);
 
+  # find prefabs in string literals
+  # selectorManagerMode.RegisterSelector(new SettingsSelectorMode(p3, Priorities.PRIORITY_SERVICE_MODE), "SettingsEditor", "Prefabs/Framework/SettingsEditor");
+  foreach my $prefab ($code =~ m/\"(Prefabs\/[^\"]*[^\"\/])\"/g) {
+    my $resource = "$assets/Resources/$prefab";
+    $resources{$path}{$resource} = 1;
+  }
+
   # find all resources loaded explicitly by this script
-  foreach my $loadarg ($code =~ m/Resources.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
-    # check for the only expression we recognize
+  # Resources.Load("Prefabs/Framework/ButtonLegend");
+  # Resources.Load<GameObject>("Prefabs/P3SAAudio");
+  # Resources.Load("Prefabs/" + sceneName + "/BallSave")
+  foreach my $loadarg ($code =~ m/Resources\.Load\s*(?:<\s*\w+\s*>\s*)?\(([^)]*)/g) {
+    if ($loadarg =~ m/^\s*\"([^\"]+)\"\s*$/) {
+      my $resource = "$assets/Resources/$1";
+      $resources{$path}{$resource} = 1;
+    }
+    # check for this exact expression
     # Resources.Load("Prefabs/" + sceneName + "/BallSave")
-    if ($loadarg =~ m#^\"Prefabs/\" \+ sceneName \+ \"/([^\"]+)\"$#) {
+    elsif ($loadarg =~ m#^\"Prefabs/\" \+ sceneName \+ \"/([^\"]+)\"$#) {
       my $prefab = $1;
       foreach my $scene (keys %scenes) {
         my $resource = "$assets/Resources/Prefabs/$scene/$prefab";
@@ -229,20 +243,26 @@ sub process_script {
         }
       }
     }
-    elsif ($loadarg =~ m/^\s*\"([^\"]+)\"\s*$/) {
-      my $resource = "$assets/Resources/$1";
-      $resources{$path}{$resource} = 1;
+    # check for an expression with constant prefix
+    # containing parent directory and stem of filename
+    # Resources.Load("Prefabs/X_Scoring_" + value.ToString() + "X")
+    elsif ($loadarg =~ m#^\"([^"]+)/([^"/]+)\"\s*\+#) {
+      my $dir = $1;
+      my $stem = $2;
+      my @files = find_files_with_stem("$assets/Resources/$dir", $stem);
+      foreach my $file (@files) {
+	if ($file =~ /^(.*)\.prefab$/) {
+	   my $not_resource = "$assets/Resources/$dir/$stem";
+	   delete $resources{$path}{$not_resource};
+	   my $prefab = $1;
+	   my $resource = "$assets/Resources/$dir/$prefab";
+           $resources{$path}{$resource} = 1;
+	}
+      }
     }
     #else {
     #  print "Unrecognized resource in Resources.Load=$loadarg\n";
     #}
-  }
-
-  # find prefabs in string literals
-  # selectorManagerMode.RegisterSelector(new SettingsSelectorMode(p3, Priorities.PRIORITY_SERVICE_MODE), "SettingsEditor", "Prefabs/Framework/SettingsEditor");
-  foreach my $prefab ($code =~ m/\"(Prefabs\/[^\"]*[^\"\/])\"/g) {
-    my $resource = "$assets/Resources/$prefab";
-    $resources{$path}{$resource} = 1;
   }
 
   # find audio clips played by this script
@@ -280,9 +300,22 @@ sub process_script {
 
 sub process_sound {
   my ($path, $play) = @_;
-  if ($play =~ m/^\s*\"([^"]+)\"/) {
+  # check for a constant
+  if ($play =~ m/^\s*\"([^"]+)\"$/) {
     my $sound = "$assets/Resources/Sound/$1";
-    $resources{$path}{$sound} = 1 if $sound;
+    $resources{$path}{$sound} = 1;
+  }
+  # check for an expression with constant prefix
+  # containing parent directory and stem of filename
+  elsif ($play =~ m/^\"([^"]+)/) {
+    my $stem = $1;
+    my @files = find_files_with_stem("$assets/Resources/Sound", $stem);
+    foreach my $file (@files) {
+      if ($file =~ /^(.*)\.(wav|mp3|ogg)$/) {
+         my $sound = "$assets/Resources/Sound/$1";
+         $resources{$path}{$sound} = 1;
+      }
+    }
   }
 }
 
@@ -523,4 +556,12 @@ sub remove_comments {
   # taken from https://metacpan.org/pod/perlfaq6#How-do-I-use-a-regular-expression-to-strip-C-style-comments-from-a-file
   $code =~ s#/\*[^*]*\*+([^/*][^*]*\*+)*/|//([^\\]|[^\n][\n]?)*?\n|("(\\.|[^"\\])*"|'(\\.|[^'\\])*'|.[^/"'\\]*)#defined $3 ? $3 : ""#gse;
   return $code;
+}
+
+sub find_files_with_stem {
+    my ($dir, $stem) = @_;
+    opendir(my $dh, $dir) or die "Cannot open directory '$dir': $!";
+    my @matches = grep { /^$stem/ && -f "$dir/$_" } readdir($dh);
+    closedir($dh);
+    return @matches;
 }
