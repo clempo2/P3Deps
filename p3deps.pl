@@ -282,6 +282,11 @@ sub process_script {
     process_sound($path, $play);
   }
 
+  # soundName = "FX_Bonus_Multiplier";
+  foreach my $play ($code =~ m/soundName = (\"[^"]+\");/g) {
+    process_sound($path, $play);
+  }
+
   # PostModeEventToGUI("Evt_PlaySound", "FX/HitSound");
   foreach my $play ($code =~ m/PostModeEventToGUI\s*\(\s*\"Evt_PlaySound\",\s*([^)]*)/g) {
     process_sound($path, $play);
@@ -325,7 +330,7 @@ sub process_sound {
 sub process_asset {
   my ($path) = @_;
   my $asset = read_file($path);
-  
+
   foreach my $ref ($asset =~ m/, guid: ([^,]*),/g) {
     $refs{$path}{$ref} = 1;
   }
@@ -459,9 +464,11 @@ sub traverse {
         traverse($respath, $indent . "  ");
       }
       elsif ($audio_clip_groups{$resource}) {
+        print "$indent  audio_clip_group $resource\n";
         $used{$resource} = 1;
       }
       else {
+	print "$indent  !!missing!! $resource\n";  
         $missing{$resource} = 1;
       }
     }
